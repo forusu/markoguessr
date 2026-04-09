@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link id="icon" rel="icon" href="assets/oh.webp">
     <title>Markoguessr</title>
     <style>
         * {
@@ -25,10 +26,11 @@
         }
 
         h1 {
-            text-align: center;
+            text-align: left;
             margin-bottom: 30px;
-            color: #00d9ff;
-            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+            margin-left: 40px;
+            color: #ff9d00;
+            text-shadow: 0 4px 15px #ff99004d;
         }
 
         .game-area {
@@ -102,14 +104,19 @@
             font-size: 16px;
         }
 
+        .marko {
+            position: absolute;
+            width: 35px
+        }
+
         button {
             padding: 12px 24px;
-            background: linear-gradient(135deg, #ffc803, #202020);
+            background: linear-gradient(135deg, #ff9d00, #202020);
             border-color: #ff9d00;
             box-shadow: 0 4px 15px #ff99004d;
             color: rgb(0, 0, 0);
             border-radius: 6px;
-            color: #fff;
+            color: #121212;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
@@ -119,9 +126,6 @@
         button:hover {
             transform: translateY(-2px);
             box-shadow: #ff99004d;
-        }
-
-        button:active {
         }
 
         button:disabled {
@@ -326,8 +330,12 @@
             transition: all 0.3s ease;
         }
 
+        .difficulty-btn:hover {
+            transform: translateY(-5px);
+        }
+
         .difficulty-btn.active {
-            background: linear-gradient(135deg, #ffc803, #202020);
+            background: linear-gradient(135deg, #ff9d00, #202020);
             border-color: #ff9d00;
             box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3);
             color: rgb(0, 0, 0);
@@ -340,6 +348,14 @@
             margin-top: 8px;
         }
 
+        a {
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-shadow: 0 8px 25px #ff99004d;
+        }
+
         footer {  
             position:relative;
             margin-bottom:0
@@ -348,7 +364,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>MARKOGUESSR</h1>
+        <img class="marko" src="assets/oh.webp"><a href="index.html"><h1>MARKOGUESSR</h1></a>
 
         <div id="setupSection" class="setup-panel">
             <h2>Setup Your Game</h2>
