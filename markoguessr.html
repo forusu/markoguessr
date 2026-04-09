@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markoguessr</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #060606 0%, #353129 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d9ff;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .challenge-panel h2 {
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        #frameCanvas {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            cursor: crosshair;
+        }
+
+        .timer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .timer-display {
+            font-size: 36px;
+            font-weight: bold;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .timer-display.running {
+            color: #ffaa00;
+        }
+
+        .timer-display.stopped {
+            color: #ff4444;
+        }
+
+        .instructions {
+            background: rgba(0, 217, 255, 0.1);
+            border: 2px solid rgba(0, 217, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #00d9ff;
+        }
+
+        .instructions strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #ffc803, #202020);
+            border-color: #ff9d00;
+            box-shadow: 0 4px 15px #ff99004d;
+            color: rgb(0, 0, 0);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: #ff99004d;
+        }
+
+        button:active {
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.submit-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        button.submit-btn:hover {
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            display: none;
+        }
+
+        .result.correct {
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            display: block !important;
+        }
+
+        .result.incorrect {
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid #ff6b6b;
+            color: #ff6b6b;
+            display: block !important;
+        }
+
+        .video-panel h2 {
+            color: #00d9ff;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            background: #000;
+        }
+
+        .video-controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .current-time {
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+            color: #00d9ff;
+            text-align: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .controls h3 {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .keybind-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 13px;
+            color: #999;
+        }
+
+        .keybind-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+        }
+
+        .key {
+            background: rgba(0, 217, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #00d9ff;
+        }
+
+        .setup-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .setup-panel h2 {
+            color: #ffaa00;
+            margin-bottom: 20px;
+        }
+
+        .setup-panel input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+        .setup-panel input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00d9ff;
+        }
+
+        @media (max-width: 1024px) {
+            .game-area {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #hiddenVideo {
+            display: none;
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .difficulty-btn {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-btn.active {
+            background: linear-gradient(135deg, #ffc803, #202020);
+            border-color: #ff9d00;
+            box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3);
+            color: rgb(0, 0, 0);
+        }
+
+        .tolerance-info {
+            text-align: center;
+            color: #aaa;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MARKOGUESSR</h1>
+
+        <div id="setupSection" class="setup-panel">
+            <h2>Setup Your Game</h2>
+            
+            <label for="seedInput">Random Seed (optional - leave empty for random):</label>
+            <input type="number" id="seedInput" placeholder="Enter seed number">
+            
+            <div style="margin: 20px 0;">
+                <label style="display: block; margin-bottom: 10px;">Difficulty:</label>
+                <div class="difficulty-selector">
+                    <div class="difficulty-btn active" onclick="selectDifficulty('easy')">
+                        <div style="font-weight: bold; margin-bottom: 5px;">Easy</div>
+                        <div style="font-size: 12px;">±5 seconds</div>
+                    </div>
+                    <div class="difficulty-btn" onclick="selectDifficulty('medium')">
+                        <div style="font-weight: bold; margin-bottom: 5px;">Medium</div>
+                        <div style="font-size: 12px;">±3 second</div>
+                    </div>
+                    <div class="difficulty-btn" onclick="selectDifficulty('hard')">
+                        <div style="font-weight: bold; margin-bottom: 5px;">Hard</div>
+                        <div style="font-size: 12px;">±0.5 seconds</div>
+                    </div>
+                    <div class="difficulty-btn" onclick="selectDifficulty('frame-perfect')">
+                        <div style="font-weight: bold; margin-bottom: 5px;">Frame Perfect</div>
+                        <div style="font-size: 12px;">±0.033 seconds</div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="loadGame()">Start Game</button>
+        </div>
+
+        <div id="gameSection" class="hidden">
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">Seed</div>
+                    <div class="stat-value" id="seedDisplay">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Difficulty</div>
+                    <div class="stat-value" id="difficultyDisplay">Easy</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Crop Type</div>
+                    <div class="stat-value" id="cropTypeDisplay">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Video Duration</div>
+                    <div class="stat-value" id="durationDisplay">-</div>
+                </div>
+            </div>
+
+            <div class="game-area">
+                <div class="panel challenge-panel">
+                    <h2>The frame prompt</h2>
+                    <canvas id="frameCanvas"></canvas>
+                    
+                    <div class="timer">
+                        <span style="color: #aaa;">Time:</span>
+                        <span class="timer-display" id="timerDisplay">00:00.000</span>
+                    </div>
+
+                    <!-- <div class="instructions">
+                        <strong>📍 How to Play:</strong>
+                        Find this exact frame in the video player using keyboard controls. When you think you've found it, click "Submit Current Position" to lock in your guess!
+                    </div> -->
+
+                    <button class="submit-btn" onclick="submitGuess()">Submit Current Position</button>
+
+                    <div id="result" class="result"></div>
+
+                    <button onclick="newRound()" style="margin-top: 15px; width: 100%;">New Round</button>
+                    <!-- <button onclick="resetGame()" style="margin-top: 10px; width: 100%; background: linear-gradient(135deg, #ff6b6b, #cc5555);">Change Video</button> -->
+                </div>
+
+                <div class="panel video-panel">
+                    <h2>Video Player</h2>
+                    <video id="videoPlayer" controls></video>
+                    
+                    <div class="video-controls">
+                        <div class="current-time" id="currentTimeDisplay">00:00.000 / 00:00.000</div>
+                        
+                        <div class="controls">
+                            <h3>Keybinds:</h3>
+                            <div class="keybind-list">
+                                <div class="keybind-item">
+                                    <span>Play/Pause</span>
+                                    <span class="key">K / Space</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>Frame Back</span>
+                                    <span class="key">J / ,</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>Frame Forward</span>
+                                    <span class="key">L / .</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>-5 seconds</span>
+                                    <span class="key">←</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>+5 seconds</span>
+                                    <span class="key">→</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>-1 second</span>
+                                    <span class="key">Shift + ←</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>+1 second</span>
+                                    <span class="key">Shift + →</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>Seek to %</span>
+                                    <span class="key">1-9</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>Speed Up</span>
+                                    <span class="key">]</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>Slow Down</span>
+                                    <span class="key">[</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>Normal Speed</span>
+                                    <span class="key">\</span>
+                                </div>
+                                <div class="keybind-item">
+                                    <span>Submit Guess</span>
+                                    <span class="key">Enter</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <video id="hiddenVideo"></video>
+
+    <script>
+        let gameState = {
+            targetTime: 0,
+            seed: 0,
+            cropData: null,
+            startTime: null,
+            timerInterval: null,
+            videoDuration: 0,
+            videoFile: null,
+            difficulty: 'easy',
+            hasSubmitted: false,
+            tolerances: {
+                'easy': 5.0,
+                'medium': 3.0,
+                'hard': 0.5,
+                'frame-perfect': 0.033
+            }
+        };
+
+        const videoPlayer = document.getElementById('videoPlayer');
+        const hiddenVideo = document.getElementById('hiddenVideo');
+
+        // Seeded random number generator
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+
+            range(min, max) {
+                return min + Math.floor(this.next() * (max - min));
+            }
+        }
+
+        function selectDifficulty(difficulty) {
+            gameState.difficulty = difficulty;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.difficulty-btn').classList.add('active');
+        }
+
+        function loadGame() {
+            const seedInput = document.getElementById('seedInput').value;
+
+            gameState.seed = seedInput
+                ? parseInt(seedInput)
+                : Math.floor(Math.random() * 1000000);
+
+            const videoURL = "coffee_time.mp4";
+
+            videoPlayer.src = videoURL;
+            hiddenVideo.src = videoURL;
+
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('gameSection').classList.remove('hidden');
+
+            function onLoadedMetadata() {
+                gameState.videoDuration = videoPlayer.duration;
+                document.getElementById('durationDisplay').textContent =
+                    formatTime(gameState.videoDuration);
+
+                setupKeyboardControls();
+                setupTimeDisplay();
+                startNewRound();
+            }
+
+            videoPlayer.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+        }
+
+        function startNewRound() {
+            const rng = new SeededRandom(gameState.seed);
+            
+            // Pick random timestamp (avoid first and last 5 seconds)
+            const minTime = 5;
+            const maxTime = gameState.videoDuration - 5;
+            gameState.targetTime = minTime + rng.next() * (maxTime - minTime);
+
+            // Random crop decision
+            const cropChance = rng.next();
+            if (cropChance < 0.3) {
+                // No crop (30% chance)
+                gameState.cropData = null;
+            } else {
+                // Random crop (70% chance)
+                const minCrop = 0.3;
+                const maxCrop = 0.7;
+                const cropAmount = minCrop + rng.next() * (maxCrop - minCrop);
+                
+                gameState.cropData = {
+                    x: rng.next() * (1 - cropAmount),
+                    y: rng.next() * (1 - cropAmount),
+                    width: cropAmount,
+                    height: cropAmount
+                };
+            }
+
+            // Update UI
+            document.getElementById('seedDisplay').textContent = gameState.seed;
+            document.getElementById('difficultyDisplay').textContent = gameState.difficulty.charAt(0).toUpperCase() + gameState.difficulty.slice(1);
+            document.getElementById('cropTypeDisplay').textContent = gameState.cropData ? 'Cropped' : 'Full';
+            document.getElementById('result').style.display = 'none';
+            gameState.hasSubmitted = false;
+            document.querySelector('.submit-btn').disabled = false;
+
+            // Reset video player to start
+            videoPlayer.currentTime = 0;
+            videoPlayer.pause();
+
+            // Capture frame
+            captureFrame();
+
+            // Start timer
+            startTimer();
+        }
+
+        function captureFrame() {
+            hiddenVideo.currentTime = gameState.targetTime;
+
+            hiddenVideo.addEventListener('seeked', function captureOnSeek() {
+                const canvas = document.getElementById('frameCanvas');
+                const ctx = canvas.getContext('2d');
+
+                // Set canvas size to match video aspect ratio
+                const videoAspect = hiddenVideo.videoWidth / hiddenVideo.videoHeight;
+                canvas.width = 800;
+                canvas.height = 800 / videoAspect;
+
+                if (gameState.cropData) {
+                    // Draw cropped section
+                    const crop = gameState.cropData;
+                    const sx = crop.x * hiddenVideo.videoWidth;
+                    const sy = crop.y * hiddenVideo.videoHeight;
+                    const sw = crop.width * hiddenVideo.videoWidth;
+                    const sh = crop.height * hiddenVideo.videoHeight;
+
+                    ctx.drawImage(hiddenVideo, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+                } else {
+                    // Draw full frame
+                    ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+                }
+
+                hiddenVideo.removeEventListener('seeked', captureOnSeek);
+            }, { once: true });
+        }
+
+        function startTimer() {
+            gameState.startTime = Date.now();
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.classList.add('running');
+            timerDisplay.classList.remove('stopped');
+
+            gameState.timerInterval = setInterval(() => {
+                const elapsed = Date.now() - gameState.startTime;
+                timerDisplay.textContent = formatTimeMs(elapsed);
+            }, 10);
+        }
+
+        function stopTimer() {
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+                document.getElementById('timerDisplay').classList.remove('running');
+                document.getElementById('timerDisplay').classList.add('stopped');
+            }
+        }
+
+        function formatTimeMs(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            const millis = ms % 1000;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
+        }
+
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            
+            if (h > 0) {
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+            }
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+        }
+
+        function submitGuess() {
+            if (gameState.hasSubmitted) return;
+            gameState.hasSubmitted = true;
+            document.querySelector('.submit-btn').disabled = true;
+            stopTimer();
+            
+            const guessTime = videoPlayer.currentTime;
+            const diff = Math.abs(guessTime - gameState.targetTime);
+            const tolerance = gameState.tolerances[gameState.difficulty];
+            
+            console.log('Guess submitted:', {
+                guessTime,
+                targetTime: gameState.targetTime,
+                difference: diff,
+                tolerance,
+                passed: diff <= tolerance
+            });
+            
+            const resultDiv = document.getElementById('result');
+            const finalTime = document.getElementById('timerDisplay').textContent;
+            
+            // Always show the result
+            resultDiv.style.display = 'block';
+            
+            if (diff <= tolerance) {
+                resultDiv.className = 'result correct';
+                let rating = '';
+                if (diff <= 0.033) rating = 'FRAME PERFECT!!!';
+                else if (diff <= 0.1) rating = 'MY STOMAK IS ILL!';
+                else if (diff <= 0.5) rating = 'DAT IS VERY FUNNY!';
+                else rating = 'CORRECT!';
+                
+                resultDiv.innerHTML = `
+                    ${rating}<br>
+                    Off by: ${diff.toFixed(3)}s<br>
+                    Time: ${finalTime}<br>
+                    Target: ${formatTime(gameState.targetTime)}
+                `;
+            } else {
+                resultDiv.className = 'result incorrect';
+                resultDiv.innerHTML = `
+                    You didn't get it right!<br>
+                    Difference: ${diff.toFixed(3)}s (need ≤${tolerance}s)<br>
+                    Time: ${finalTime}<br>
+                    Your guess: ${formatTime(guessTime)}<br>
+                    Target: ${formatTime(gameState.targetTime)}
+                `;
+            }
+
+            // Jump to actual timestamp
+            videoPlayer.currentTime = gameState.targetTime;
+            videoPlayer.play();
+        }
+
+        function newRound() {
+            gameState.seed = Math.floor(Math.random() * 1000000);
+            startNewRound();
+        }
+
+        function resetGame() {
+            document.getElementById('setupSection').classList.remove('hidden');
+            document.getElementById('gameSection').classList.add('hidden');
+            stopTimer();
+            videoPlayer.pause();
+            videoPlayer.src = '';
+            hiddenVideo.src = '';
+        }
+
+        function setupTimeDisplay() {
+            videoPlayer.addEventListener('timeupdate', () => {
+                const current = videoPlayer.currentTime;
+                const duration = videoPlayer.duration;
+                document.getElementById('currentTimeDisplay').textContent = 
+                    `${formatTime(current)} / ${formatTime(duration)}`;
+            });
+        }
+
+        function setupKeyboardControls() {
+            let playbackRate = 1.0;
+
+            document.addEventListener('keydown', (e) => {
+                // Don't interfere with typing in input fields
+                if (document.activeElement.tagName === 'INPUT' && document.activeElement.type !== 'file') {
+                    return;
+                }
+
+                const currentTime = videoPlayer.currentTime;
+                const frameTime = 1 / 30; // Assume 30fps
+
+                switch(e.key.toLowerCase()) {
+                    case 'k':
+                    case ' ':
+                        e.preventDefault();
+                        if (videoPlayer.paused) {
+                            videoPlayer.play();
+                        } else {
+                            videoPlayer.pause();
+                        }
+                        break;
+
+                    case 'j':
+                    case ',':
+                        e.preventDefault();
+                        videoPlayer.pause();
+                        videoPlayer.currentTime = Math.max(0, currentTime - frameTime);
+                        break;
+
+                    case 'l':
+                    case '.':
+                        e.preventDefault();
+                        videoPlayer.pause();
+                        videoPlayer.currentTime = Math.min(gameState.videoDuration, currentTime + frameTime);
+                        break;
+
+                    case 'arrowleft':
+                        e.preventDefault();
+                        const leftSkip = e.shiftKey ? 1 : 5;
+                        videoPlayer.currentTime = Math.max(0, currentTime - leftSkip);
+                        break;
+
+                    case 'arrowright':
+                        e.preventDefault();
+                        const rightSkip = e.shiftKey ? 1 : 5;
+                        videoPlayer.currentTime = Math.min(gameState.videoDuration, currentTime + rightSkip);
+                        break;
+
+                    case '0':
+                        e.preventDefault();
+                        videoPlayer.currentTime = 0;
+                        break;
+
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '5':
+                    case '6':
+                    case '7':
+                    case '8':
+                    case '9':
+                        e.preventDefault();
+                        const percent = parseInt(e.key) * 0.1;
+                        videoPlayer.currentTime = gameState.videoDuration * percent;
+                        break;
+
+                    case '[':
+                        e.preventDefault();
+                        playbackRate = Math.max(0.25, playbackRate - 0.25);
+                        videoPlayer.playbackRate = playbackRate;
+                        break;
+
+                    case ']':
+                        e.preventDefault();
+                        playbackRate = Math.min(2.0, playbackRate + 0.25);
+                        videoPlayer.playbackRate = playbackRate;
+                        break;
+
+                    case '\\':
+                        e.preventDefault();
+                        playbackRate = 1.0;
+                        videoPlayer.playbackRate = playbackRate;
+                        break;
+
+                    case 'enter':
+                        e.preventDefault();
+                        if (!document.getElementById('gameSection').classList.contains('hidden') && !gameState.hasSubmitted) {
+                            submitGuess();
+                        }
+                        break;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
